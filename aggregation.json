@@ -1,0 +1,53 @@
+[
+  {
+    $match: {
+      adsbReports: {
+        $elemMatch: {
+          callsign: /^UAL/,
+          timestamp: {
+            $gte: ISODate(
+            "2023-01-31T12:00:00.000-07:00"
+            ),
+          },
+          timestamp: {
+            $lt: ISODate(
+            "2023-02-01T00:00:00.000-07:00"
+            ),
+          },
+        },
+      },
+    },
+  },
+  {
+    $group: {
+      _id: "$model",
+      aircraftSet: {
+        $addToSet: "$tailNum",
+      },
+    },
+  },
+  {
+    $project: {
+      airline: "United",
+      model: "$_id",
+      count: {
+        $size: "$aircraftSet",
+      },
+      manufacturer: {
+        $cond: {
+          if: {
+            $eq: [
+              {
+                $substrBytes: ["$_id", 0, 1],
+              },
+              "B",
+            ],
+          },
+          then: "BOEING",
+          else: "AIRBUS",
+        },
+      },
+      _id: "$$REMOVE",
+    },
+  },
+]
