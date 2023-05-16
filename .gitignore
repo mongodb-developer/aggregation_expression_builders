@@ -36,6 +36,11 @@ build/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea/.gitignore
+.idea/.name
+.idea/gradle.xml
+.idea/misc.xml
+.idea/vcs.xml
 *.iws
 *.iml
 *.ipr
