@@ -1,7 +1,7 @@
 [
   {
     $match: {
-      adsbReports: {
+      positionReports: {
         $elemMatch: {
           callsign: /^UAL/,
           timestamp: {
@@ -34,17 +34,64 @@
         $size: "$aircraftSet",
       },
       manufacturer: {
-        $cond: {
-          if: {
-            $eq: [
-              {
-                $substrBytes: ["$_id", 0, 1],
-              },
-              "B",
-            ],
+        $let: {
+          vars: {
+            manufacturerPrefix: {
+              $substrBytes: ["$_id", 0, 1],
+            },
           },
-          then: "BOEING",
-          else: "AIRBUS",
+          in: {
+            $switch: {
+              branches: [
+                {
+                  case: {
+                    $eq: [
+                      "$$manufacturerPrefix",
+                      "A",
+                    ],
+                  },
+                  then: "AIRBUS",
+                },
+                {
+                  case: {
+                    $eq: [
+                      "$$manufacturerPrefix",
+                      "B",
+                    ],
+                  },
+                  then: "BOEING",
+                },
+                {
+                  case: {
+                    $eq: [
+                      "$$manufacturerPrefix",
+                      "C",
+                    ],
+                  },
+                  then: "CANADAIR",
+                },
+                {
+                  case: {
+                    $eq: [
+                      "$$manufacturerPrefix",
+                      "E",
+                    ],
+                  },
+                  then: "EMBRAER",
+                },
+                {
+                  case: {
+                    $eq: [
+                      "$$manufacturerPrefix",
+                      "M",
+                    ],
+                  },
+                  then: "MCDONNELL DOUGLAS",
+                },
+              ],
+              default: "UNKNOWN",
+            },
+          },
         },
       },
       _id: "$$REMOVE",

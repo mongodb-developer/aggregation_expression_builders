@@ -4,10 +4,12 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.mql.MqlDate;
 import com.mongodb.client.model.mql.MqlDocument;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -16,6 +18,7 @@ import java.util.Date;
 import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Accumulators.addToSet;
+import static com.mongodb.client.model.Accumulators.sum;
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.expr;
 import static com.mongodb.client.model.Projections.*;
@@ -102,21 +105,23 @@ public class AggregationExpressions {
 
 
             //Now do the same thing using aggregation and expression builders
+            var from = of(Instant.parse("2023-01-31T12:00:00.000-07:00"));
+            var to = of(Instant.parse("2023-02-01T00:00:00.000-07:00"));
 
             var positionReports = current().<MqlDocument>getArray("positionReports");
             Bson bMatchStage = match(expr(
                     positionReports.any(positionReport -> {
                         var callsign = positionReport.getString("callsign");
-                        var ts = positionReport.getDate("timestamp");
+                        var timestamp = positionReport.getDate("timestamp");
                         return callsign
-                                .substrBytes(0,3)
+                                .substr(0,3)
                                 .eq(of("UAL"))
-                                .and(ts.gte(of(fromInstant)))
-                                .and(ts.lt(of(toInstant)));
+                                .and(timestamp.gte(from))
+                                .and(timestamp.lt(to));
                     })
             ));
 
-            Bson bGroupStage = group("$model",
+            Bson bGroupStage = group(current().getString("model"),
                     addToSet("aircraftSet", current().getString("tailNum")));
 
             Bson bProjectStage = project(fields(
@@ -125,8 +130,15 @@ public class AggregationExpressions {
                     computed("count", current().<MqlDocument>getArray("aircraftSet").size()),
                     computed("manufacturer", current()
                             .getString("_id")
-                            .substr(0, 1).eq(of("B"))
-                            .cond(of("BOEING"), of("AIRBUS"))),
+                            .substr(0, 1)
+                            .switchStringOn(s -> s
+                                    .eq(of("A"), (m -> of("AIRBUS")))
+                                    .eq(of("B"), (m -> of("BOEING")))
+                                    .eq(of("C"), (m -> of("CANADAIR")))
+                                    .eq(of("E"), (m -> of("EMBRAER")))
+                                    .eq(of("M"), (m -> of("MCDONNELL DOUGLAS")))
+                                    .defaults(m -> of("UNKNOWN"))
+                            )),
                     excludeId()
             ));
 
