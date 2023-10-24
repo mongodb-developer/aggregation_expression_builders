@@ -58,8 +58,10 @@ public class AggregationExpressions {
                     new Document("positionReports",
                             new Document("$elemMatch",
                                     new Document("callsign", Pattern.compile("^UAL"))
-                                            .append("timestamp", new Document("$gte", fromDate))
-                                            .append("timestamp", new Document("$lt", toDate))
+                                            .append("$and", Arrays.asList(
+                                                    new Document("timestamp", new Document("$gte", fromDate)),
+                                                    new Document("timestamp", new Document("$lt", toDate))
+                                            ))
                             )
                     )
             );
